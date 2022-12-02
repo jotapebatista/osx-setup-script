@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Setup script for setting up a new macos machine
+echo "Starting setup"
+
+# install xcode CLI
+xcode-select —-install
+
+# Check for Homebrew to be present, install if it's missing
+if test ! $(which brew); then
+    echo "Installing homebrew..."
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+fi
+
+# Update homebrew recipes
+brew update
+
+PACKAGES=(
+    git
+    bat
+    macvim
+    mysql
+    fzf
+    ctags
+<...list all the packages you want to install>
+    readline
+)
+echo "Installing packages..."
+brew install ${PACKAGES[@]}
+# any additional steps you want to add here
+# link readline
+brew link --force readline
+
+# Cleaning Up
+echo "Cleaning up..."
+brew cleanup
+
+
+# Installing Python 
+echo "Installing Python packages..."
+PYTHON_PACKAGES=(
+    virtualenv
+    virtualenvwrapper
+)
+sudo pip install ${PYTHON_PACKAGES[@]}
+
+# Setup of a new machine
+echo "Installing cask..."
+CASKS=(
+    iterm2
+    adobe-acrobat-reader
+    skype
+    spotify
+    visual-studio-code
+    1password
+    sublime-text
+    autodesk-fusion360
+    microsoft-excel
+    microsoft-word
+    OneDrive
+    serial
+    google-drive
+    nextcloud
+    vlc
+    rustdesk
+    anydesk
+    kicad
+    raspberry-pi-imager
+    brave-browser
+    macvim
+)
+echo "Installing cask apps..."
+brew install --cask ${CASKS[@]}
+
+echo "Machine setup completed asshole!"
