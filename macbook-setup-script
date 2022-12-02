@@ -31,7 +31,6 @@ brew link --force readline
 echo "Cleaning up..."
 brew cleanup
 
-
 # Installing Python 
 echo "Installing Python packages..."
 PYTHON_PACKAGES=(
