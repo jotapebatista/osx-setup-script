@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-# Setup script for setting up a new macos machine
 echo "Starting setup"
 
-# Check for Homebrew to be present, install if it's missing
-if test ! $(which brew); then
-    echo "Installing homebrew..."
-    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+# Check for Homebrew, install if missing
+if ! command -v brew &>/dev/null; then
+    echo "Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
-# Update homebrew recipes
 brew update
 
+# Install packages
 PACKAGES=(
     git
     bat
@@ -18,53 +17,37 @@ PACKAGES=(
     mysql
     fzf
     ctags
-<...list all the packages you want to install>
     readline
+    python3
 )
 echo "Installing packages..."
-brew install ${PACKAGES[@]}
-# any additional steps you want to add here
-# link readline
-brew link --force readline
+brew install "${PACKAGES[@]}"
 
-# Cleaning Up
 echo "Cleaning up..."
 brew cleanup
 
-# Installing Python 
 echo "Installing Python packages..."
-PYTHON_PACKAGES=(
-    virtualenv
-    virtualenvwrapper
-)
-sudo pip install ${PYTHON_PACKAGES[@]}
+brew install pipx
+pipx install virtualenv
+pipx install virtualenvwrapper
 
-# Setup of a new machine
-echo "Installing cask..."
+# Install cask applications
 CASKS=(
     iterm2
     adobe-acrobat-reader
-    skype
     spotify
     visual-studio-code
     1password
-    sublime-text
-    autodesk-fusion360
-    microsoft-excel
-    microsoft-word
-    OneDrive
     serial
     google-drive
     nextcloud
     vlc
-    rustdesk
-    anydesk
-    kicad
     raspberry-pi-imager
     brave-browser
-    macvim
 )
 echo "Installing cask apps..."
-brew install --cask ${CASKS[@]}
+for app in "${CASKS[@]}"; do
+    brew install --cask "$app"
+done
 
-echo "Machine setup completed asshole!"
+echo "Machine setup completed successfully!"
