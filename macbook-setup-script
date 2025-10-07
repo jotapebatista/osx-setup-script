@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
-echo "Starting setup"
+
+set -e  # Exit on error
+set -u  # Exit on undefined variable
+
+echo "Starting macOS setup for 2025..."
 
 # Check for Homebrew, install if missing
 if ! command -v brew &>/dev/null; then
     echo "Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    
+    # Add Homebrew to PATH for Apple Silicon Macs
+    if [[ $(uname -m) == "arm64" ]]; then
+        echo "Configuring Homebrew for Apple Silicon..."
+        echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    fi
 fi
 
+echo "Updating Homebrew..."
 brew update
 
 # Install packages
@@ -16,18 +28,21 @@ PACKAGES=(
     macvim
     mysql
     fzf
-    ctags
+    universal-ctags
     readline
     python3
+    pipx
+    gh
+    jq
+    wget
+    ripgrep
 )
+
 echo "Installing packages..."
 brew install "${PACKAGES[@]}"
 
-echo "Cleaning up..."
-brew cleanup
-
-echo "Installing Python packages..."
-brew install pipx
+echo "Installing Python tools via pipx..."
+pipx ensurepath
 pipx install virtualenv
 pipx install virtualenvwrapper
 
@@ -38,16 +53,41 @@ CASKS=(
     spotify
     visual-studio-code
     1password
-    serial
     google-drive
     nextcloud
     vlc
     raspberry-pi-imager
     brave-browser
 )
-echo "Installing cask apps..."
+
+echo "Installing cask applications..."
 for app in "${CASKS[@]}"; do
-    brew install --cask "$app"
+    if brew list --cask "$app" &>/dev/null; then
+        echo "⏭️  $app already installed, skipping..."
+    else
+        echo "📦 Installing $app..."
+        brew install --cask "$app" || echo "⚠️  Failed to install $app, continuing..."
+    fi
 done
 
-echo "Machine setup completed successfully!"
+echo "Cleaning up..."
+brew cleanup
+
+echo ""
+echo "✅ Machine setup completed successfully!"
+echo ""
+echo "📝 Post-setup notes:"
+echo "  - Run 'source ~/.zprofile' or restart your terminal to apply PATH changes"
+echo "  - Configure virtualenvwrapper by adding to your shell config:"
+echo "    export WORKON_HOME=\$HOME/.virtualenvs"
+echo "    export VIRTUALENVWRAPPER_PYTHON=$(which python3)"
+echo "    source $(pipx environment --value PIPX_BIN_DIR)/virtualenvwrapper.sh"
+echo "  - Configure fzf keybindings: \$(brew --prefix)/opt/fzf/install"
+echo "  - GitHub CLI: Run 'gh auth login' to authenticate"
+echo ""
+echo "🆕 New tools added:"
+echo "  - universal-ctags: Modern replacement for ctags"
+echo "  - gh: GitHub CLI for repository management"
+echo "  - jq: JSON processor for command line"
+echo "  - wget: Network downloader"
+echo "  - ripgrep: Faster grep alternative (use 'rg' command)"
