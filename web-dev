@@ -1,0 +1,258 @@
+#!/bin/bash
+
+# Mac Web Development Setup Script
+# Sets up everything you need for modern web development
+
+set -e
+
+echo "🚀 Starting Mac Web Development Setup..."
+echo ""
+
+# Install Homebrew if not installed
+if ! command -v brew &> /dev/null; then
+    echo "📦 Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Add Homebrew to PATH for current session and persist to shell profile
+    if command -v /opt/homebrew/bin/brew &> /dev/null; then
+        eval "$((/opt/homebrew/bin/brew) shellenv)"
+        grep -q "/opt/homebrew/bin/brew shellenv" "$HOME/.zshrc" 2>/dev/null || echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zshrc"
+    elif command -v /usr/local/bin/brew &> /dev/null; then
+        eval "$((/usr/local/bin/brew) shellenv)"
+        grep -q "/usr/local/bin/brew shellenv" "$HOME/.zshrc" 2>/dev/null || echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.zshrc"
+    fi
+else
+    echo "✅ Homebrew already installed"
+    # Ensure brew env is available in current session
+    eval "$(brew shellenv)" 2>/dev/null || true
+fi
+
+echo ""
+echo "📦 Installing development tools..."
+
+# Install Git
+brew install git
+
+# Install Node.js & npm via nvm (Node Version Manager)
+if [ ! -d "$HOME/.nvm" ]; then
+    echo "📦 Installing nvm (Node Version Manager)..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+    # Load nvm
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+    # Install latest LTS Node.js
+    echo "📦 Installing Node.js LTS..."
+    nvm install --lts
+    nvm use --lts
+    nvm alias default node
+else
+    echo "✅ nvm already installed"
+    # Load nvm to ensure node/npm are available in this session
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    # Ensure an LTS Node is installed and active
+    if ! command -v node >/dev/null 2>&1; then
+        echo "📦 Installing Node.js LTS..."
+        nvm install --lts
+    fi
+    nvm use --lts >/dev/null 2>&1 || nvm install --lts
+    # Set default alias to lts/* if not already set
+    current_default=$(nvm alias default 2>/dev/null | awk '{print $3}')
+    if [ -z "$current_default" ] || [ "$current_default" = "(default)" ]; then
+        nvm alias default lts/* >/dev/null 2>&1 || true
+    fi
+fi
+
+# Install pnpm (fast package manager)
+if ! command -v pnpm &> /dev/null; then
+    echo "📦 Installing pnpm..."
+    curl -fsSL https://get.pnpm.io/install.sh | sh -
+else
+    echo "✅ pnpm already installed"
+fi
+
+# Ensure pnpm is available in this session
+export PNPM_HOME="$HOME/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+
+# Install Yarn
+if ! command -v yarn &> /dev/null; then
+    echo "📦 Installing Yarn..."
+    npm install -g yarn
+else
+    echo "✅ Yarn already installed"
+fi
+
+# Install useful CLI tools
+echo "📦 Installing useful CLI tools..."
+brew install \
+    gh \
+    jq \
+    wget \
+    tree \
+    httpie \
+    bat \
+    eza \
+    fzf \
+    ripgrep \
+    tldr
+
+# Install Docker Desktop
+if ! brew list --cask docker &> /dev/null; then
+    echo "🐳 Installing Docker Desktop..."
+    brew install --cask docker
+else
+    echo "✅ Docker Desktop already installed"
+fi
+
+# Install VS Code
+if ! brew list --cask visual-studio-code &> /dev/null; then
+    echo "💻 Installing Visual Studio Code..."
+    brew install --cask visual-studio-code
+else
+    echo "✅ VS Code already installed"
+fi
+
+# Install useful browsers for testing
+echo "🌐 Installing browsers..."
+
+brew tap homebrew/cask-versions >/dev/null 2>&1 || true
+brew install --cask arc
+
+# Install Postman (API testing)
+if ! brew list --cask postman &> /dev/null; then
+    echo "📮 Installing Postman..."
+    brew install --cask postman
+else
+    echo "✅ Postman already installed"
+fi
+
+# Update .zshrc with nvm and pnpm paths
+echo ""
+echo "📝 Updating .zshrc with development paths..."
+
+# Ensure .zshrc exists and create backup once
+touch "$HOME/.zshrc"
+if [ ! -f "$HOME/.zshrc.backup" ] && [ -f "$HOME/.zshrc" ]; then
+    cp "$HOME/.zshrc" "$HOME/.zshrc.backup"
+fi
+
+# Add nvm configuration if not already present
+if ! grep -q "NVM_DIR" "$HOME/.zshrc"; then
+    cat >> "$HOME/.zshrc" << 'EOF'
+
+# nvm (Node Version Manager)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+EOF
+fi
+
+# Add pnpm configuration if not already present
+if ! grep -q "PNPM_HOME" "$HOME/.zshrc"; then
+    cat >> "$HOME/.zshrc" << 'EOF'
+
+# pnpm
+export PNPM_HOME="$HOME/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+EOF
+fi
+
+# Add useful aliases
+if ! grep -q "# Web Dev Aliases" "$HOME/.zshrc"; then
+    cat >> "$HOME/.zshrc" << 'EOF'
+
+# Web Dev Aliases
+alias gst="git status"
+alias gco="git checkout"
+alias gcb="git checkout -b"
+alias gp="git push"
+alias gl="git pull"
+alias gc="git commit -m"
+alias ga="git add"
+alias gaa="git add ."
+alias ll="eza -l --icons"
+
+# NPM/PNPM helpers
+alias nrd="npm run dev"
+alias nrb="npm run build"
+alias prd="pnpm run dev"
+alias prb="pnpm run build"
+
+# Utility functions
+mkcd() { mkdir -p "$1" && cd "$1"; }
+EOF
+fi
+
+
+# Install global npm packages
+echo ""
+echo "📦 Installing global npm packages..."
+npm install -g \
+    typescript \
+    ts-node \
+    vercel \
+    netlify-cli \
+    serve \
+    npm-check-updates \
+    nodemon \
+    prettier \
+    eslint
+
+# Configure Git
+echo ""
+echo "📝 Configuring Git..."
+
+# Use env vars if provided, otherwise prompt only if interactive terminal
+git_name=${GIT_NAME:-}
+git_email=${GIT_EMAIL:-}
+if [ -z "$git_name" ] || [ -z "$git_email" ]; then
+    if [ -t 0 ]; then
+        read -p "Enter your Git name: " git_name
+        read -p "Enter your Git email: " git_email
+    else
+        echo "ℹ️  Skipping Git user.name/email (set GIT_NAME and GIT_EMAIL to auto-configure)"
+    fi
+fi
+
+if [ -n "$git_name" ]; then git config --global user.name "$git_name"; fi
+if [ -n "$git_email" ]; then git config --global user.email "$git_email"; fi
+git config --global init.defaultBranch main
+git config --global core.editor "code --wait"
+git config --global pull.rebase false
+
+echo ""
+echo "✨ Setup complete!"
+echo ""
+echo "📋 What was installed:"
+echo "  ✅ Homebrew (package manager)"
+echo "  ✅ Git (version control)"
+echo "  ✅ nvm + Node.js LTS (JavaScript runtime)"
+echo "  ✅ pnpm + Yarn (package managers)"
+echo "  ✅ Docker Desktop (containerization)"
+echo "  ✅ VS Code"
+echo "  ✅ Postman (API testing)"
+echo "  ✅ Chrome, Firefox Dev, Arc (browsers)"
+echo "  ✅ Global npm packages (TypeScript, Vercel, etc.)"
+echo ""
+echo "📋 Next steps:"
+echo "1. Restart your terminal or run: source ~/.zshrc"
+echo "2. Open Docker Desktop and complete setup"
+echo "3. Set MesloLGS NF font in VS Code:"
+echo "   Settings → Terminal › Integrated: Font Family → 'MesloLGS NF'"
+echo "4. Sign in to GitHub CLI: gh auth login"
+echo "5. Start coding in ~/Projects directory!"
+echo ""
+echo "💡 Useful commands added:"
+echo "   gst - Git status"
+echo "   ll - Better ls with icons"
+echo "   mkcd <dir> - Create and cd into directory"
+echo ""
+echo "🎉 Happy coding!"
